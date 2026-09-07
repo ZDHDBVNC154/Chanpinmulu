@@ -77,7 +77,9 @@ export const POST: APIRoute = async ({ request, cookies, url, redirect }) => {
     variantPublicId,
     extras.flatMap((e) => (e.public_id ? [e.public_id] : [])),
   );
-  cart[key] = Math.min((cart[key] ?? 0) + 1, CART_QTY_MAX);
+  if (cart[key] == null) {
+    cart[key] = Math.min(Math.max(1, product.moq ?? 1), CART_QTY_MAX);
+  }
 
   writeCart(cookies, cart, url.protocol === 'https:');
   return done();

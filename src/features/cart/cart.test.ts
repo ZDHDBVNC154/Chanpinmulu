@@ -14,7 +14,7 @@ const cookiesWith = (value: unknown): AstroCookies =>
 
 describe('cartCount', () => {
   it('sums line quantities', () => {
-    expect(cartCount({ [P]: 2, [`${P}:${V}`]: 3 })).toBe(5);
+    expect(cartCount({ [P]: 2, [`${P}:${V}`]: 3 })).toBe(2);
   });
 
   it('is 0 for an empty cart', () => {
@@ -45,8 +45,8 @@ describe('readCart (cookie v2)', () => {
 
   it('drops malformed quantities and clamps oversized ones', () => {
     expect(
-      readCart(cookiesWith({ v: 2, items: { [P]: 'x', [`${P}:${V}`]: 500 } })),
-    ).toEqual({ [`${P}:${V}`]: 99 });
+      readCart(cookiesWith({ v: 2, items: { [P]: 'x', [`${P}:${V}`]: 999_999_999 } })),
+    ).toEqual({ [`${P}:${V}`]: 99_999_999 });
   });
 
   it('is empty for a missing or non-object cookie', () => {

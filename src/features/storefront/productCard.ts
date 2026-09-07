@@ -77,13 +77,15 @@ export function buildProductCard(
   return {
     id: requirePublicId(product.public_id, product.id, 'product'),
     name: product.name,
+    sku: product.sku ?? null,
+    moq: product.moq ?? 1,
+    isNew: product.is_new === 1,
+    showPrice: product.show_price == null ? true : product.show_price === 1,
     href: `/products/${product.slug}`,
     image: buildStorefrontImage(product.image_key, product.name, options),
     // The store's currency, not the row's: a product row can carry a legacy
     // currency, and the catalog has always displayed one consistent currency.
     formattedPrice: formatMoney(product.price_cents, options.currency),
-    // Availability only — never the count. `stockState` is the authoritative
-    // classification; re-deriving `stock > 0` here would fork that rule.
     inStock: stockState(product.stock) !== 'out',
   };
 }

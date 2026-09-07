@@ -2,27 +2,18 @@
 import type { Product } from './db';
 import type { CategoryOption } from '../categories/db';
 import { getConfig, toMajorUnits, currencyDecimals } from '../../config';
-import { formatWeightValue, type WeightUnit } from '../shipping/weight';
-import { attachmentActive } from '../digitalDelivery/rollout.ts';
+import { attachmentActive } from '../digitalDelivery/rollout';
 
 interface Props {
   action: string;
   submitLabel: string;
   product?: Product | null;
   error?: string | null;
-  /** Depth-tagged categories to choose from (empty = no categories yet). */
   categoryOptions?: CategoryOption[];
-  /** Ids of categories this product currently belongs to. */
   selectedCategoryIds?: number[];
-  /** Show the single-image upload (true on create; edit uses the gallery). */
   showImage?: boolean;
-  /** Optional form id, so out-of-tree inputs (e.g. the variants editor) can submit
-      with this form via the HTML `form="..."` attribute. */
   formId?: string;
-  /** Store-wide weight unit (Admin → Settings). Storage is always grams. */
-  weightUnit?: WeightUnit;
-  /** True when every enabled zone prices by weight, so a blank weight would make
-   *  this product unsellable. Shown as a requirement rather than discovered later. */
+  weightUnit?: string;
   weightRequired?: boolean;
 }
 
@@ -35,181 +26,107 @@ const {
   selectedCategoryIds = [],
   showImage = true,
   formId,
-  weightUnit = 'g',
-  weightRequired = false,
 } = Astro.props;
 const selected = new Set(selectedCategoryIds);
-// New products default to the store currency; edits keep their own.
-const defaultCurrency = product?.currency ?? getConfig().currency;
-const priceDecimals = currencyDecimals(defaultCurrency);
-const price = product
-  ? toMajorUnits(product.price_cents, product.currency).toFixed(currencyDecimals(product.currency))
-  : '';
-// Input increment matches the currency's precision: 0.01 (USD), 1 (JPY), 0.001 (BHD).
-const priceStep = priceDecimals > 0 ? (10 ** -priceDecimals).toFixed(priceDecimals) : '1';
-const inputClass =
-  'mt-1 w-full rounded-md border border-line px-3 py-2 focus:border-brand focus:outline-none';
+const currency = product?.currency ?? getConfig().currency;
+const decimals = currencyDecimals(currency);
+const price = product ? toMajorUnits(product.price_cents, product.currency).toFixed(decimals) : '';
+const priceStep = decimals > 0 ? (10 ** -decimals).toFixed(decimals) : '1';
+const inputClass = 'mt-1 w-full rounded-md border border-line px-3 py-2 focus:border-brand focus:outline-none';
 ---
 
-<form
-  method="POST"
-  action={action}
-  enctype="multipart/form-data"
-  id={formId}
-  class="max-w-lg space-y-4"
->
-  {
-    error && (
-      <p class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-        {error}
-      </p>
-    )
-  }
+<form method="POST" action={action} enctype="multipart/form-data" id={formId} class="max-w-3xl space-y-6">
+  {error && <p class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
-  <div>
-    <label class="block text-sm font-medium" for="name">Name</label>
-    <input id="name" name="name" type="text" required value={product?.name ?? ''} class={inputClass} />
-  </div>
-
-  <div>
-    <label class="block text-sm font-medium" for="slug">
-      Slug <span class="text-faint">(URL — blank to auto-generate from name)</span>
-    </label>
-    <input
-      id="slug"
-      name="slug"
-      type="text"
-      value={product?.slug ?? ''}
-      placeholder="auto-from-name"
-      class={inputClass}
-    />
-  </div>
-
-  <div>
-    <label class="block text-sm font-medium" for="description">Description</label>
-    <textarea id="description" name="description" rows="3" class={inputClass}
-      >{product?.description ?? ''}</textarea>
-      <p class="mt-1 text-xs text-gray-500">Plain text or Markdown — paragraphs, lists, links, and <code>/images/…</code> media render on the product page.</p>
-  </div>
-
-  <div class="grid grid-cols-2 gap-4">
-    <div>
-      <label class="block text-sm font-medium" for="price">Price (USD)</label>
-      <input id="price" name="price" type="number" step={priceStep} min="0" required value={price} class={inputClass} />
-    </div>
-    <div>
-      <label class="block text-sm font-medium" for="stock">Stock</label>
-      <input id="stock" name="stock" type="number" step="1" min="0" value={product?.stock ?? 0} class={inputClass} />
-    </div>
-  </div>
-
-  {attachmentActive() && <fieldset class="rounded-md border border-line p-4">
-    <legend class="px-1 text-sm font-medium">Shipping</legend>
-    <label class="flex items-center gap-2 text-sm">
-      <input
-        name="requires_shipping"
-        type="checkbox"
-        checked={product ? product.requires_shipping === 1 : true}
-        class="h-4 w-4"
-      />
-      Requires shipping
-    </label>
-    <p class="mt-1 text-xs text-muted">
-      Uncheck for digital goods (ebooks, gift cards). They are excluded from shipment weight
-      and never block checkout for a missing weight.
-    </p>
-    <div class="mt-3">
-      <label class="block text-sm font-medium" for="weight">Weight ({weightUnit})</label>
-      <input
-        id="weight"
-        name="weight"
-        type="text"
-        inputmode="decimal"
-        value={product?.weight_grams != null ? formatWeightValue(product.weight_grams, weightUnit) : ''}
-        class={inputClass}
-      />
-      <p class="mt-1 text-xs text-muted">
-        Packed item weight, excluding the shared packaging allowance set in Shipping.
-        {weightRequired
-          ? ' Required: every shipping zone prices by weight, so this product cannot be sold without it.'
-          : ' Optional while a flat rate is available.'}
-      </p>
-    </div>
-  </fieldset>}
-
-  <fieldset class="rounded-md border border-line p-4">
-    <legend class="px-1 text-sm font-medium">Digital delivery</legend>
-    {product?.file_key && (
-      <p class="mb-3 text-sm text-muted">
-        Attached: <strong>{product.file_name ?? 'download'}</strong>
-        {product.file_size_bytes != null && ` (${Math.ceil(product.file_size_bytes / 1024)} KB)`}
-      </p>
-    )}
-    <label class="block text-sm font-medium" for="deliverable">{product?.file_key ? 'Replace file' : 'Attach file'}</label>
-    <input
-      id="deliverable"
-      name="deliverable"
-      type="file"
-      accept=".pdf,.zip,.epub,.mp3,.m4a,.txt"
-      class="mt-1 block w-full text-sm text-muted"
-    />
-    <p class="mt-1 text-xs text-muted">Private download after payment. PDF, ZIP, EPUB, MP3, M4A, or TXT; 25 MB maximum. For a download-only product, uncheck <strong>Requires shipping</strong> above.</p>
-    {product?.file_key && (
-      <label class="mt-3 flex items-center gap-2 text-sm">
-        <input type="checkbox" name="remove_deliverable" class="h-4 w-4" />
-        Remove attachment from future purchases
-      </label>
-    )}
-  </fieldset>
-
-  {
-    showImage && (
+  <section class="rounded-lg border border-line bg-white p-5">
+    <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-500">基本资料</h2>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
       <div>
-        <label class="block text-sm font-medium" for="image">
-          Image
-        </label>
-        <input id="image" name="image" type="file" accept="image/*" class="mt-1 block w-full text-sm text-muted file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-brand file:px-4 file:py-2 file:text-xs file:font-medium file:uppercase file:tracking-wider file:text-on-brand hover:file:bg-brand-hover" />
+        <label class="block text-sm font-medium" for="sku">产品编号 / SKU</label>
+        <input id="sku" name="sku" type="text" required maxlength="80" value={product?.sku ?? ''} placeholder="XM-2027-001" class={inputClass} />
       </div>
-    )
-  }
+      <div>
+        <label class="block text-sm font-medium" for="name">英文产品名称</label>
+        <input id="name" name="name" type="text" required maxlength="160" value={product?.name ?? ''} placeholder="Wooden Snowman Ornament" class={inputClass} />
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="name_zh">中文内部名称</label>
+        <input id="name_zh" name="name_zh" type="text" maxlength="160" value={product?.name_zh ?? ''} placeholder="木制雪人挂件" class={inputClass} />
+      </div>
+      <div>
+        <label class="block text-sm font-medium" for="slug">网址别名</label>
+        <input id="slug" name="slug" type="text" value={product?.slug ?? ''} placeholder="留空则根据英文名称生成" class={inputClass} />
+      </div>
+    </div>
+    <div class="mt-4">
+      <label class="block text-sm font-medium" for="description">英文产品介绍</label>
+      <textarea id="description" name="description" rows="5" class={inputClass}>{product?.description ?? ''}</textarea>
+      <p class="mt-1 text-xs text-gray-500">支持Markdown，可填写卖点、应用场景和定制说明。</p>
+    </div>
+  </section>
 
-  {
-    categoryOptions.length > 0 && (
-      <fieldset>
-        <legend class="block text-sm font-medium">Categories</legend>
-        <div class="mt-1 max-h-48 space-y-1 overflow-auto rounded-md border border-line p-2">
-          {categoryOptions.map((c) => (
-            <label
-              class="flex items-center gap-2 text-sm"
-              style={`padding-left:${c.depth * 16}px`}
-            >
-              {/* cat_ public IDs — resolved back to row ids server-side. */}
-              <input
-                type="checkbox"
-                name="category"
-                value={c.public_id}
-                checked={selected.has(c.id)}
-                class="h-4 w-4"
-              />
-              {c.name}
+  <section class="rounded-lg border border-line bg-white p-5">
+    <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-500">规格与贸易信息</h2>
+    <div class="mt-4 grid gap-4 sm:grid-cols-2">
+      <label class="text-sm font-medium">材质<input name="material" maxlength="200" value={product?.material ?? ''} placeholder="Wood / Glass / Felt" class={inputClass} /></label>
+      <label class="text-sm font-medium">尺寸<input name="dimensions" maxlength="200" value={product?.dimensions ?? ''} placeholder="12 × 8 × 2 cm" class={inputClass} /></label>
+      <label class="text-sm font-medium">颜色/可选款式<input name="colors" maxlength="300" value={product?.colors ?? ''} placeholder="Red, Green, Natural" class={inputClass} /></label>
+      <label class="text-sm font-medium">最小起订量 MOQ<input name="moq" type="number" min="1" step="1" required value={product?.moq ?? 1000} class={inputClass} /></label>
+      <label class="text-sm font-medium">内包装<input name="inner_pack" maxlength="200" value={product?.inner_pack ?? ''} placeholder="12 pcs / inner box" class={inputClass} /></label>
+      <label class="text-sm font-medium">外箱装量<input name="carton_pack" maxlength="200" value={product?.carton_pack ?? ''} placeholder="144 pcs / carton" class={inputClass} /></label>
+      <label class="text-sm font-medium">外箱尺寸<input name="carton_size" maxlength="200" value={product?.carton_size ?? ''} placeholder="45 × 35 × 40 cm" class={inputClass} /></label>
+      <label class="text-sm font-medium">毛重<input name="gross_weight" maxlength="100" value={product?.gross_weight ?? ''} placeholder="12.5 kg" class={inputClass} /></label>
+      <label class="text-sm font-medium">净重<input name="net_weight" maxlength="100" value={product?.net_weight ?? ''} placeholder="10.8 kg" class={inputClass} /></label>
+      <label class="text-sm font-medium">打样时间<input name="sample_lead_time" maxlength="200" value={product?.sample_lead_time ?? ''} placeholder="7–10 days" class={inputClass} /></label>
+      <label class="text-sm font-medium">大货交期<input name="production_lead_time" maxlength="200" value={product?.production_lead_time ?? ''} placeholder="45–60 days" class={inputClass} /></label>
+      <label class="text-sm font-medium">认证<input name="certifications" maxlength="500" value={product?.certifications ?? ''} placeholder="BSCI, SEDEX, FSC" class={inputClass} /></label>
+    </div>
+  </section>
+
+  <section class="rounded-lg border border-line bg-white p-5">
+    <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-500">展示设置</h2>
+    {showImage && (
+      <div class="mt-4">
+        <label class="block text-sm font-medium" for="image">产品主图</label>
+        <input id="image" name="image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="mt-1 block w-full text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-brand file:px-4 file:py-2 file:text-white" />
+      </div>
+    )}
+
+    {categoryOptions.length > 0 && (
+      <fieldset class="mt-5">
+        <legend class="block text-sm font-medium">所属分类（可多选）</legend>
+        <div class="mt-2 max-h-56 space-y-1 overflow-auto rounded-md border border-line p-3">
+          {categoryOptions.map((category) => (
+            <label class="flex items-center gap-2 text-sm" style={`padding-left:${category.depth * 16}px`}>
+              <input type="checkbox" name="category" value={category.public_id} checked={selected.has(category.id)} class="h-4 w-4" />
+              {category.name}
             </label>
           ))}
         </div>
       </fieldset>
-    )
-  }
+    )}
 
-  <label class="flex items-center gap-2 text-sm">
-    <input name="active" type="checkbox" checked={product ? product.active === 1 : true} class="h-4 w-4" />
-    Active (visible in storefront)
-  </label>
+    <div class="mt-5 grid gap-3 sm:grid-cols-2">
+      <label class="flex items-center gap-2 text-sm"><input name="active" type="checkbox" checked={product ? product.active === 1 : true} class="h-4 w-4" />前台公开显示</label>
+      <label class="flex items-center gap-2 text-sm"><input name="is_new" type="checkbox" checked={product?.is_new === 1} class="h-4 w-4" />标记为新品</label>
+      <label class="flex items-center gap-2 text-sm"><input name="is_featured" type="checkbox" checked={product?.is_featured === 1} class="h-4 w-4" />首页推荐</label>
+      <label class="flex items-center gap-2 text-sm"><input name="oem_available" type="checkbox" checked={product ? product.oem_available === 1 : true} class="h-4 w-4" />支持OEM/ODM</label>
+      <label class="flex items-center gap-2 text-sm"><input name="show_price" type="checkbox" checked={product?.show_price === 1} class="h-4 w-4" />公开参考价格</label>
+    </div>
 
-  <input type="hidden" name="currency" value={defaultCurrency} />
+    <div class="mt-4 max-w-xs">
+      <label class="block text-sm font-medium" for="price">参考价格（{currency.toUpperCase()}）</label>
+      <input id="price" name="price" type="number" step={priceStep} min="0" value={price} placeholder="仅勾选公开价格时显示" class={inputClass} />
+    </div>
+  </section>
 
-  <div class="flex gap-3 pt-2">
-    <button type="submit" class="rounded-md bg-brand px-5 py-2 font-medium text-on-brand hover:bg-brand-hover">
-      {submitLabel}
-    </button>
-    <a href="/admin/products" class="rounded-md border border-line px-5 py-2 hover:bg-surface">Cancel</a>
+  <input type="hidden" name="currency" value={currency} />
+  <input type="hidden" name="stock" value={product?.stock ?? 999999} />
+
+  {attachmentActive() && <fieldset class="rounded-lg border border-line bg-white p-5"><legend class="px-1 text-sm font-semibold text-gray-500">数字附件（可选）</legend><input name="deliverable" type="file" class="mt-3 block w-full text-sm text-gray-500" /></fieldset>}
+
+  <div class="flex gap-3">
+    <button type="submit" class="rounded-md bg-brand px-5 py-2 font-medium text-white hover:bg-brand-hover">{submitLabel}</button>
+    <a href="/admin/products" class="rounded-md border border-line px-5 py-2 hover:bg-surface">取消</a>
   </div>
 </form>

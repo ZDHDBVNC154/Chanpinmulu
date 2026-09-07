@@ -7,7 +7,6 @@ import { setSetting, getSetting, getStoreSettings } from '../../features/setting
 import { normalizeTimeZone, allTimeZones } from '../../features/settings/timeZone';
 import { setAdminPassword, adminPasswordHash } from '../../features/auth/admin';
 import { signSession } from '../../features/auth/session';
-import { catalogIsEmpty, seedDemoCatalog } from '../../features/seed/demo';
 import { CACHE_TAG } from '../../features/cache/tags';
 import { purgeCacheTags } from '../../features/cache/purge';
 
@@ -33,15 +32,14 @@ if (Astro.request.method === 'POST') {
   const behindAccess = !!Astro.locals.adminEmail;
 
   // Validate everything BEFORE persisting anything, so a bad field never half-saves.
-  if (!tz) timeZoneError = 'Enter a valid IANA time zone, such as UTC or America/New_York.';
-  if (pw && pw.length < MIN_PW) passwordError = `Password must be at least ${MIN_PW} characters.`;
+  if (!tz) timeZoneError = '请输入有效时区，例如 Asia/Shanghai。';
+  if (pw && pw.length < MIN_PW) passwordError = `密码至少需要 ${MIN_PW} 个字符。`;
   // Finishing without any admin credential would strand the operator (the bootstrap
   // gate keeps bouncing /admin back here, and this page stays public). Require a
   // password — unless one's already set, Access fronts /admin, or this is local dev.
   const willHaveCredential = hasPasswordAlready || behindAccess || pw.length >= MIN_PW;
   if (!import.meta.env.DEV && !willHaveCredential && !passwordError) {
-    passwordError =
-      'Set an admin password — without one the dashboard is unreachable and this page stays public.';
+    passwordError = '请设置后台密码，否则后台无法安全使用。';
   }
 
   if (!timeZoneError && !passwordError) {
@@ -64,15 +62,6 @@ if (Astro.request.method === 'POST') {
         maxAge: SESSION_TTL,
       });
     }
-    // Optional demo catalog (guarded so it never clobbers an existing catalog; a
-    // seed failure shouldn't block finishing — the store just starts empty).
-    if (form.get('seed_demo') === 'on' && (await catalogIsEmpty(env.DB))) {
-      try {
-        await seedDemoCatalog(env.DB);
-      } catch (err) {
-        console.error('Demo catalog seed failed:', err);
-      }
-    }
     await setSetting(env.DB, 'setup_complete', '1');
     await purgeCacheTags([CACHE_TAG.shell, CACHE_TAG.catalog]);
     return Astro.redirect('/admin?msg=setup-complete', 303);
@@ -84,24 +73,20 @@ const storeName = settings.storeName ?? cfg.storeName;
 const timeZone = settings.timeZone ?? cfg.timeZone;
 const timeZones = allTimeZones();
 const hasPassword = !!(await getSetting(env.DB, 'admin_password_hash'));
-const catalogEmpty = await catalogIsEmpty(env.DB);
 ---
 
-<AdminLayout title="Setup" active="dashboard">
+<AdminLayout title="首次设置" active="dashboard">
   <div class="mx-auto max-w-2xl">
-    <h1 class="text-2xl font-bold">Set up your store</h1>
-    <p class="mt-1 text-sm text-gray-500">
-      A few first-run settings — you can change them any time in Settings. This just gets
-      you running.
-    </p>
+    <h1 class="text-2xl font-bold">设置产品目录后台</h1>
+    <p class="mt-1 text-sm text-gray-500">只需设置工厂名称和后台密码，完成后就可以上传产品。</p>
 
     <form method="POST" class="mt-8 space-y-6">
       {/* ── Store basics ─────────────────────────────────────────────────────── */}
       <section class="rounded-lg border border-line bg-white p-5">
-        <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-500">Store basics</h2>
+        <h2 class="text-sm font-semibold tracking-widest text-gray-500">基本信息</h2>
         <div class="mt-4 flex flex-wrap items-end gap-3">
           <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
-            Store name
+            工厂 / 品牌名称
             <input
               type="text"
               name="store_name"
@@ -110,7 +95,7 @@ const catalogEmpty = await catalogIsEmpty(env.DB);
             />
           </label>
           <label class="flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
-            Store time zone
+            时区
             <input
               type="text"
               name="time_zone"
@@ -119,7 +104,7 @@ const catalogEmpty = await catalogIsEmpty(env.DB);
               list="tz-list"
               data-time-zone
               data-auto-detect={settings.timeZone ? 'false' : 'true'}
-              placeholder="Search e.g. America/New_York"
+              placeholder="例如 Asia/Shanghai"
               class="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal focus:border-brand focus:outline-none"
             />
             <datalist id="tz-list">
@@ -128,66 +113,35 @@ const catalogEmpty = await catalogIsEmpty(env.DB);
           </label>
         </div>
         {timeZoneError && <p class="mt-2 text-xs text-red-600">{timeZoneError}</p>}
-        <p class="mt-3 text-xs text-gray-400">
-          Currency stays a build-time setting (it's wired through every price) — set
-          <code class="rounded bg-gray-100 px-1">currency</code> in
-          <code class="rounded bg-gray-100 px-1">src/config.ts</code>. Current:
-          {' '}{cfg.currency.toUpperCase()}.
-        </p>
+        <p class="mt-3 text-xs text-gray-400">默认时区用于询价单时间显示；之后可在设置中修改。</p>
       </section>
 
       {/* ── Admin password ───────────────────────────────────────────────────── */}
       <section class="rounded-lg border border-line bg-white p-5">
-        <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-500">Admin password</h2>
+        <h2 class="text-sm font-semibold tracking-widest text-gray-500">后台密码</h2>
         <p class="mt-1 text-sm text-gray-500">
-          Password for <code class="rounded bg-gray-100 px-1">/admin/login</code> — stored hashed
-          (PBKDF2), never plaintext.{' '}
-          {hasPassword ? 'A password is already set; leave blank to keep it.' : 'Required to finish.'}
-          {' '}Cloudflare Access is the recommended production auth; this is the simpler stopgap.
+          登录入口为 <code class="rounded bg-gray-100 px-1">/admin/login</code>。密码只保存加密摘要，不保存明文。
+          {' '}{hasPassword ? '已经设置过密码，留空则保持不变。' : '首次设置必须填写。'}
         </p>
         <label class="mt-4 flex flex-col gap-1 text-xs uppercase tracking-widest text-gray-400">
-          {hasPassword ? 'New password (optional)' : 'New password'}
+          {hasPassword ? '新密码（不修改请留空）' : '设置密码'}
           <input
             type="password"
             name="admin_password"
             autocomplete="new-password"
             minlength="8"
-            placeholder="at least 8 characters"
+            placeholder="至少 8 个字符"
             class="w-64 rounded-md border border-gray-300 px-3 py-2 text-sm normal-case tracking-normal focus:border-brand focus:outline-none"
           />
         </label>
         {passwordError && <p class="mt-2 text-xs text-red-600">{passwordError}</p>}
       </section>
 
-      {/* ── Payments (configured later in Settings — not needed to get running) ─ */}
-      <section class="rounded-lg border border-line bg-white p-5">
-        <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-500">Payments</h2>
-        <p class="mt-2 text-sm text-gray-500">
-          <strong>Demo</strong> checkout works right away. Set up real payment methods (card via
-          Stripe, Bitcoin Lightning, or OpenNode) whenever you're ready in
-          {' '}<strong>Settings → Payments</strong> — no need to do it now.
-        </p>
-      </section>
-
-      {/* ── Optional demo catalog + single finish button ─────────────────────── */}
-      {catalogEmpty && (
-        <label class="flex items-start gap-2 text-sm text-gray-600">
-          <input
-            type="checkbox"
-            name="seed_demo"
-            class="mt-0.5 rounded border-gray-300 text-brand focus:ring-brand"
-          />
-          <span>
-            Load the <strong>demo catalog</strong> — 30 sample products across 6 categories,
-            to explore the storefront. Leave unchecked to start empty and add your own.
-          </span>
-        </label>
-      )}
       <button
         type="submit"
         class="w-fit rounded-md bg-brand px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-hover"
       >
-        Finish setup
+        完成设置并进入后台
       </button>
     </form>
   </div>

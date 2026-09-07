@@ -3,6 +3,7 @@ import { env } from 'cloudflare:workers';
 import {
   getProduct,
   getProductByPublicId,
+  getProductBySku,
   listProductImages,
   syncPrimaryImage,
   updateProduct,
@@ -135,6 +136,11 @@ export const POST: APIRoute = async ({ request, params, redirect, locals }) => {
     requireWeight: zonesRequireWeight(shippingFor(locals.settings).config),
   });
   if ('error' in parsed) return fail(parsed.error);
+  if (!parsed.data.sku) return fail('请填写产品编号（SKU）。');
+  if (parsed.data.sku) {
+    const duplicate = await getProductBySku(env.DB, parsed.data.sku);
+    if (duplicate && duplicate.id !== id) return fail(`产品编号 ${parsed.data.sku} 已经存在。`);
+  }
 
   // Weights are checked before ANY write. applyVariantForm runs last, after the
   // image, product, and category mutations — reporting the error from there left

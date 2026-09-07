@@ -91,6 +91,7 @@ const DENIED_MODULES = [
 ];
 
 const SOURCE_EXTENSIONS = ['.astro', '.ts', '.tsx', '.mjs', '.js'];
+const portablePath = (value) => value.replace(/\\/g, '/');
 
 /**
  * Comments are stripped before scanning. Storefront files are expected to
@@ -150,7 +151,7 @@ async function resolveLocal(specifier, fromFile) {
   ];
   for (const candidate of candidates) {
     try {
-      if ((await stat(candidate)).isFile()) return candidate;
+      if ((await stat(candidate)).isFile()) return portablePath(candidate);
     } catch {
       // Keep trying; an unresolvable specifier is reported by the caller.
     }
@@ -168,7 +169,7 @@ async function* walk(dir) {
     return;
   }
   for (const entry of entries) {
-    const full = join(dir, entry.name);
+    const full = portablePath(join(dir, entry.name));
     if (entry.isDirectory()) yield* walk(full);
     else if (SOURCE_EXTENSIONS.some((extension) => entry.name.endsWith(extension))) yield full;
   }
@@ -219,7 +220,7 @@ function checkRequestContext(file, source) {
  * controls, and files inside their own candidate root.
  */
 function checkTemplateImport({ specifier, typeOnly }, resolved, file, rootDir) {
-  if (resolved && !relative(rootDir, resolved).startsWith('..')) return;
+  if (resolved && !portablePath(relative(rootDir, resolved)).startsWith('..')) return;
   if (resolved === MODELS_MODULE) {
     if (!typeOnly) {
       problems.push(
@@ -281,7 +282,7 @@ async function checkEntry(entry, rootDir, policy) {
 
 const paths = process.argv.slice(2);
 for (const rawRoot of paths.length > 0 ? paths : defaultPaths()) {
-  const root = rawRoot.replace(/\/+$/, '');
+  const root = portablePath(rawRoot).replace(/\/+$/, '');
   // A root named `controls` takes the core-control policy. Matching the
   // directory name rather than one hardcoded path lets the same checker be
   // pointed at a candidate theme or a future preset.

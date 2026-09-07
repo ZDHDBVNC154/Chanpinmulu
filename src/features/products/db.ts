@@ -5,8 +5,26 @@ export interface Product {
   id: number;
   public_id: string | null;
   name: string;
+  name_zh?: string | null;
+  sku?: string | null;
   slug: string;
   description: string | null;
+  material?: string | null;
+  dimensions?: string | null;
+  colors?: string | null;
+  moq?: number;
+  inner_pack?: string | null;
+  carton_pack?: string | null;
+  carton_size?: string | null;
+  gross_weight?: string | null;
+  net_weight?: string | null;
+  sample_lead_time?: string | null;
+  production_lead_time?: string | null;
+  certifications?: string | null;
+  oem_available?: number;
+  is_new?: number;
+  is_featured?: number;
+  show_price?: number;
   price_cents: number;
   currency: string;
   image_key: string | null;
@@ -31,7 +49,25 @@ export interface Product {
 /** Scalar fields parsed from the product form (image handled separately). */
 export interface ProductFields {
   name: string;
+  name_zh: string | null;
+  sku: string | null;
   description: string | null;
+  material: string | null;
+  dimensions: string | null;
+  colors: string | null;
+  moq: number;
+  inner_pack: string | null;
+  carton_pack: string | null;
+  carton_size: string | null;
+  gross_weight: string | null;
+  net_weight: string | null;
+  sample_lead_time: string | null;
+  production_lead_time: string | null;
+  certifications: string | null;
+  oem_available: number;
+  is_new: number;
+  is_featured: number;
+  show_price: number;
   price_cents: number;
   currency: string;
   stock: number;
@@ -206,6 +242,10 @@ export async function getProductsByPublicIds(
 
 export async function getProduct(db: D1Database, id: number): Promise<Product | null> {
   return db.prepare('SELECT * FROM products WHERE id = ?').bind(id).first<Product>();
+}
+
+export async function getProductBySku(db: D1Database, sku: string): Promise<Product | null> {
+  return db.prepare('SELECT * FROM products WHERE sku = ? COLLATE NOCASE').bind(sku).first<Product>();
 }
 
 /** Active products at or below a stock threshold, lowest first (for the dashboard). */
@@ -394,11 +434,23 @@ export async function createProduct(db: D1Database, p: ProductInput): Promise<nu
   return withPublicId('product', async (publicId) => {
     const row = await db
       .prepare(
-        `INSERT INTO products (name, slug, description, price_cents, currency, image_key, stock, active, weight_grams, requires_shipping, public_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO products (
+           name, name_zh, sku, slug, description, material, dimensions, colors, moq,
+           inner_pack, carton_pack, carton_size, gross_weight, net_weight,
+           sample_lead_time, production_lead_time, certifications, oem_available,
+           is_new, is_featured, show_price, price_cents, currency, image_key, stock,
+           active, weight_grams, requires_shipping, public_id
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING id`,
       )
-      .bind(p.name, p.slug, p.description, p.price_cents, p.currency, p.image_key, p.stock, p.active, p.weight_grams, p.requires_shipping, publicId)
+      .bind(
+        p.name, p.name_zh, p.sku, p.slug, p.description, p.material, p.dimensions,
+        p.colors, p.moq, p.inner_pack, p.carton_pack, p.carton_size, p.gross_weight,
+        p.net_weight, p.sample_lead_time, p.production_lead_time, p.certifications,
+        p.oem_available, p.is_new, p.is_featured, p.show_price, p.price_cents,
+        p.currency, p.image_key, p.stock, p.active, p.weight_grams,
+        p.requires_shipping, publicId,
+      )
       .first<{ id: number }>();
     return row!.id;
   });
@@ -408,11 +460,22 @@ export async function updateProduct(db: D1Database, id: number, p: ProductInput)
   await db
     .prepare(
       `UPDATE products
-         SET name = ?, slug = ?, description = ?, price_cents = ?, currency = ?, image_key = ?, stock = ?, active = ?,
-             weight_grams = ?, requires_shipping = ?
+         SET name = ?, name_zh = ?, sku = ?, slug = ?, description = ?, material = ?,
+             dimensions = ?, colors = ?, moq = ?, inner_pack = ?, carton_pack = ?,
+             carton_size = ?, gross_weight = ?, net_weight = ?, sample_lead_time = ?,
+             production_lead_time = ?, certifications = ?, oem_available = ?,
+             is_new = ?, is_featured = ?, show_price = ?, price_cents = ?, currency = ?,
+             image_key = ?, stock = ?, active = ?, weight_grams = ?, requires_shipping = ?
        WHERE id = ?`,
     )
-    .bind(p.name, p.slug, p.description, p.price_cents, p.currency, p.image_key, p.stock, p.active, p.weight_grams, p.requires_shipping, id)
+    .bind(
+      p.name, p.name_zh, p.sku, p.slug, p.description, p.material, p.dimensions,
+      p.colors, p.moq, p.inner_pack, p.carton_pack, p.carton_size, p.gross_weight,
+      p.net_weight, p.sample_lead_time, p.production_lead_time, p.certifications,
+      p.oem_available, p.is_new, p.is_featured, p.show_price, p.price_cents,
+      p.currency, p.image_key, p.stock, p.active, p.weight_grams,
+      p.requires_shipping, id,
+    )
     .run();
 }
 

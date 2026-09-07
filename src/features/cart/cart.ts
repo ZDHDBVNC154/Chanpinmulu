@@ -12,7 +12,9 @@ import { parseCartKey, lineUnitPriceCents } from './key';
 const COOKIE = 'cart';
 /** Script-readable item count (see writeCart). Mirrors COOKIE's lifetime. */
 export const COUNT_COOKIE = 'cart_n';
-const MAX_QTY = 99;
+// RFQ quantities commonly run into the thousands; keep a hard upper bound while
+// allowing realistic factory enquiry volumes.
+const MAX_QTY = 99_999_999;
 /**
  * Cookie format version. v2 = public-ID line keys stored as {v: 2, items: {key: qty}}.
  * Pre-cutover cookies were a bare {key: qty} map with numeric keys and have no
@@ -88,7 +90,7 @@ export function clearCart(cookies: AstroCookies): void {
 }
 
 export function cartCount(cart: Cart): number {
-  return Object.values(cart).reduce((sum, q) => sum + q, 0);
+  return Object.keys(cart).length;
 }
 
 /**

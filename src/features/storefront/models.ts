@@ -42,6 +42,10 @@ export interface ProductCardModel {
   /** `prod_` public ID. Never a row ID. */
   id: string;
   name: string;
+  sku?: string | null;
+  moq?: number;
+  isNew?: boolean;
+  showPrice?: boolean;
   /** Root-relative product URL. */
   href: string;
   image: StorefrontImage;
@@ -198,6 +202,12 @@ export interface ProductSeoModel {
 export interface ProductDetailModel {
   id: string;
   name: string;
+  sku?: string | null;
+  nameZh?: string | null;
+  moq?: number;
+  showPrice?: boolean;
+  oemAvailable?: boolean;
+  specifications?: { label: string; value: string }[];
   /** Raw Markdown source (also what the catalog API returns). */
   description: string | null;
   /** Rendered, sanitized HTML (renderMarkdown: raw HTML escaped, schemes

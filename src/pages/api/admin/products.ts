@@ -4,6 +4,7 @@ import {
   createProduct,
   deleteProduct,
   getProduct,
+  getProductBySku,
   syncPrimaryImage,
   setProductFile,
 } from '../../../features/products/db';
@@ -40,6 +41,10 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
     requireWeight: zonesRequireWeight(shippingFor(locals.settings).config),
   });
   if ('error' in parsed) return redirect(fail(parsed.error), 303);
+  if (!parsed.data.sku) return redirect(fail('请填写产品编号（SKU）。'), 303);
+  if (parsed.data.sku && await getProductBySku(env.DB, parsed.data.sku)) {
+    return redirect(fail(`产品编号 ${parsed.data.sku} 已经存在。`), 303);
+  }
 
   let mediaId: number | null = null;
   const file = form.get('image');

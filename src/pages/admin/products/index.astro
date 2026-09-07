@@ -1,7 +1,6 @@
 ---
 import { env } from 'cloudflare:workers';
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import { formatPrice } from '../../../config';
 import { listAllProducts, countAllProducts } from '../../../features/products/db';
 import ProductImage from '../../../features/products/ProductImage.astro';
 import { orderByClause } from '../../../features/products/sort';
@@ -58,14 +57,14 @@ const sortHref = (col: string) =>
 const arrow = (col: string) => (sort === col ? (dir === 'asc' ? ' ↑' : ' ↓') : '');
 ---
 
-<AdminLayout title="Products" active="products">
+<AdminLayout title="产品" active="products">
   <div class="mb-8 flex items-center justify-between">
-    <h1 class="font-serif text-3xl tracking-tight">Products</h1>
+    <h1 class="font-serif text-3xl tracking-tight">产品</h1>
     <a
       href="/admin/products/new"
       class="rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover"
     >
-      New product
+      新增产品
     </a>
   </div>
 
@@ -73,9 +72,9 @@ const arrow = (col: string) => (sort === col ? (dir === 'asc' ? ' ↑' : ' ↓')
     action="/admin/products"
     active={filtered}
     count={matchCount}
-    noun="product"
+    noun="产品"
     hidden={{ sort: sort ?? undefined, dir: dir ?? undefined }}
-    search={{ name: 'q', value: filters.q, placeholder: 'Product name' }}
+    search={{ name: 'q', value: filters.q, placeholder: '产品名称' }}
     selects={[
       {
         name: 'status',
@@ -99,21 +98,15 @@ const arrow = (col: string) => (sort === col ? (dir === 'asc' ? ' ↑' : ' ↓')
     <thead>
       <tr class="border-b border-line text-xs uppercase tracking-widest text-gray-400">
         <th class="py-3 pr-4 font-normal">
-          <a href={sortHref('name')} class="hover:text-brand">Product{arrow('name')}</a>
+          <a href={sortHref('name')} class="hover:text-brand">产品{arrow('name')}</a>
         </th>
+        <th class="py-3 pr-4 font-normal">SKU</th>
+        <th class="py-3 pr-4 font-normal">MOQ</th>
+        <th class="py-3 pr-4 font-normal">推荐</th>
         <th class="py-3 pr-4 font-normal">
-          <a href={sortHref('price')} class="hover:text-brand">Price{arrow('price')}</a>
+          <a href={sortHref('active')} class="hover:text-brand">展示{arrow('active')}</a>
         </th>
-        <th class="py-3 pr-4 font-normal">
-          <a href={sortHref('stock')} class="hover:text-brand">Stock{arrow('stock')}</a>
-        </th>
-        <th class="py-3 pr-4 font-normal">
-          <a href={sortHref('sold')} class="hover:text-brand">Sold{arrow('sold')}</a>
-        </th>
-        <th class="py-3 pr-4 font-normal">
-          <a href={sortHref('active')} class="hover:text-brand">Active{arrow('active')}</a>
-        </th>
-        <th class="py-3 text-right font-normal">Actions</th>
+        <th class="py-3 text-right font-normal">操作</th>
       </tr>
     </thead>
     <tbody>
@@ -134,12 +127,10 @@ const arrow = (col: string) => (sort === col ? (dir === 'asc' ? ' ↑' : ' ↓')
                 <span class="font-medium">{p.name}</span>
               </a>
             </td>
-            <td data-label="Price" class="py-3 pr-4 tabular-nums">{formatPrice(p.price_cents)}</td>
-            <td data-label="Stock" class="py-3 pr-4 tabular-nums">{p.stock}</td>
-            <td data-label="Sold" class="py-3 pr-4 tabular-nums">
-              {p.sold > 0 ? p.sold : <span class="text-gray-300">0</span>}
-            </td>
-            <td data-label="Active" class="py-3 pr-4">{p.active ? 'Yes' : <span class="text-gray-400">No</span>}</td>
+            <td data-label="SKU" class="py-3 pr-4 text-gray-500">{p.sku ?? '—'}</td>
+            <td data-label="MOQ" class="py-3 pr-4 tabular-nums">{p.moq ?? 1}</td>
+            <td data-label="推荐" class="py-3 pr-4">{p.is_featured ? '是' : <span class="text-gray-300">—</span>}</td>
+            <td data-label="展示" class="py-3 pr-4">{p.active ? '是' : <span class="text-gray-400">否</span>}</td>
             <td data-label="" class="py-3 text-right">
               <div class="flex justify-end gap-4 text-xs uppercase tracking-widest">
                 <a
@@ -148,10 +139,10 @@ const arrow = (col: string) => (sort === col ? (dir === 'asc' ? ' ↑' : ' ↓')
                   rel="noopener"
                   class="text-gray-500 hover:text-brand"
                 >
-                  View ↗
+                  查看 ↗
                 </a>
                 <a href={`/admin/products/${p.public_id}/edit`} class="text-accent hover:underline">
-                  Edit
+                  编辑
                 </a>
                 <form
                   method="POST"
@@ -159,12 +150,12 @@ const arrow = (col: string) => (sort === col ? (dir === 'asc' ? ' ↑' : ' ↓')
                   onsubmit={`return confirm('${
                     menuRefs.has(p.id)
                       ? 'This product is linked from your navigation. Deleting it hides that link on the storefront. Continue?'
-                      : 'Delete this product?'
+                      : '确定删除这个产品吗？'
                   }')`}
                 >
                   <input type="hidden" name="_action" value="delete" />
                   <button type="submit" class="text-red-600 hover:underline">
-                    Delete
+                    删除
                   </button>
                 </form>
               </div>
@@ -178,7 +169,7 @@ const arrow = (col: string) => (sort === col ? (dir === 'asc' ? ' ↑' : ' ↓')
             <td colspan="6" class="py-8 text-center text-gray-400">
               {/* "No products yet" would be wrong — and confusing — when the
                   store has plenty and the filter simply excluded them all. */}
-              {filtered ? 'No products match these filters.' : 'No products yet.'}
+              {filtered ? '没有符合筛选条件的产品。' : '还没有产品。'}
             </td>
           </tr>
         )

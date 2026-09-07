@@ -1,0 +1,19 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+const success = Astro.url.searchParams.get('success');
+const error = Astro.url.searchParams.get('error');
+---
+
+<AdminLayout title="批量导入" active="imports">
+  <h1 class="font-serif text-3xl tracking-tight">批量导入产品</h1>
+  <p class="mt-3 max-w-2xl text-sm leading-relaxed text-gray-500">下载模板，用 Excel 或 WPS 填写后另存为 UTF-8 CSV，再上传。以 SKU 为唯一编号：已有 SKU 会更新，没有的会新增。</p>
+  {success && <p class="mt-6 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{success}</p>}
+  {error && <p class="mt-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+  <div class="mt-8 grid gap-8 lg:grid-cols-[1fr_18rem]">
+    <form method="POST" action="/api/admin/imports" enctype="multipart/form-data" class="rounded-lg border border-line p-6">
+      <label class="block text-sm font-medium">CSV 文件<input required type="file" name="file" accept=".csv,text/csv" class="mt-3 block w-full rounded-md border border-line bg-white px-3 py-3 text-sm" /></label>
+      <button type="submit" class="mt-5 rounded-md bg-brand px-5 py-2.5 text-xs font-medium tracking-wider text-white hover:bg-brand-hover">开始导入</button>
+    </form>
+    <aside class="rounded-lg border border-line p-5 text-sm"><h2 class="font-medium">使用说明</h2><ol class="mt-3 list-decimal space-y-2 pl-5 text-gray-500"><li><a href="/admin/import-template.csv" class="text-accent hover:underline">下载 CSV 模板</a></li><li>不要修改表头名称</li><li>分类填写现有分类名称，多个用英文分号分隔</li><li>1 表示开启，0 表示关闭</li></ol><p class="mt-4 text-xs leading-relaxed text-gray-400">单次最多 5,000 行、2 MB。产品图片可在导入后进入产品编辑页上传。</p></aside>
+  </div>
+</AdminLayout>

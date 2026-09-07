@@ -1,0 +1,21 @@
+---
+import { env } from 'cloudflare:workers';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { getInquiry } from '../../../features/inquiries/db';
+import { parsePublicId } from '../../../features/ids/publicId';
+
+const publicId = parsePublicId(Astro.params.id, 'inquiry');
+const result = publicId ? await getInquiry(env.DB, publicId) : null;
+if (!result) return new Response('Not found', { status: 404 });
+const { inquiry, items } = result;
+const statusLabel = { new: '新询价', contacted: '已联系', quoted: '已报价', closed: '已关闭' } as const;
+---
+
+<AdminLayout title={inquiry.reference} active="inquiries">
+  <a href="/admin/inquiries" class="text-sm text-gray-500 hover:text-brand">&larr; 返回询价单</a>
+  <div class="mt-4 mb-8 flex flex-wrap items-start justify-between gap-4"><div><p class="text-xs tracking-widest text-gray-400">询价编号</p><h1 class="mt-1 font-serif text-3xl tracking-tight">{inquiry.reference}</h1><p class="mt-2 text-sm text-gray-500">{new Date(inquiry.created_at + 'Z').toLocaleString('zh-CN')}</p></div><form method="POST" action={`/api/admin/inquiries/${inquiry.public_id}`} class="flex items-center gap-2"><label class="text-xs text-gray-500" for="status">状态</label><select id="status" name="status" class="rounded-md border border-line bg-white px-3 py-2 text-sm">{Object.entries(statusLabel).map(([value, label]) => <option value={value} selected={inquiry.status === value}>{label}</option>)}</select><button class="rounded-md bg-brand px-4 py-2 text-xs text-white hover:bg-brand-hover">保存</button></form></div>
+  <div class="grid gap-8 lg:grid-cols-[1fr_20rem]">
+    <section><h2 class="mb-3 text-xs tracking-widest text-gray-400">询价产品</h2><div class="overflow-x-auto rounded-lg border border-line"><table class="admin-table w-full min-w-[36rem] text-left text-sm"><thead><tr class="border-b border-line bg-gray-50 text-xs text-gray-400"><th class="px-4 py-3 font-normal">SKU</th><th class="px-4 py-3 font-normal">产品</th><th class="px-4 py-3 font-normal">选项</th><th class="px-4 py-3 text-right font-normal">数量</th></tr></thead><tbody>{items.map((item) => <tr class="border-b border-line last:border-0"><td class="px-4 py-3 text-gray-500">{item.sku ?? '—'}</td><td class="px-4 py-3">{item.name}</td><td class="px-4 py-3 text-gray-500">{item.option_label ?? '—'}</td><td class="px-4 py-3 text-right tabular-nums">{item.quantity}</td></tr>)}</tbody></table></div>{inquiry.message && <div class="mt-6 rounded-lg border border-line p-5"><h2 class="text-xs tracking-widest text-gray-400">客户要求</h2><p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{inquiry.message}</p></div>}</section>
+    <aside class="rounded-lg border border-line p-5"><h2 class="text-xs tracking-widest text-gray-400">客户资料</h2><dl class="mt-4 space-y-4 text-sm"><div><dt class="text-xs text-gray-400">姓名</dt><dd class="mt-1">{inquiry.contact_name}</dd></div><div><dt class="text-xs text-gray-400">公司</dt><dd class="mt-1">{inquiry.company}</dd></div><div><dt class="text-xs text-gray-400">邮箱</dt><dd class="mt-1 break-all"><a href={`mailto:${inquiry.email}`} class="text-accent hover:underline">{inquiry.email}</a></dd></div>{inquiry.phone && <div><dt class="text-xs text-gray-400">电话 / WhatsApp</dt><dd class="mt-1">{inquiry.phone}</dd></div>}<div><dt class="text-xs text-gray-400">国家/地区</dt><dd class="mt-1">{inquiry.country}</dd></div>{inquiry.target_delivery && <div><dt class="text-xs text-gray-400">期望交期</dt><dd class="mt-1">{inquiry.target_delivery}</dd></div>}</dl></aside>
+  </div>
+</AdminLayout>

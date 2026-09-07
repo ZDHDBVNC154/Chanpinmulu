@@ -15,4 +15,10 @@ import type { DeepPartial, SiteConfig } from './config';
  *
  * Operational switches and integrations belong in Admin → Settings.
  */
-export const storeOverrides: DeepPartial<SiteConfig> = {};
+export const storeOverrides: DeepPartial<SiteConfig> = {
+  storeName: 'Christmas Factory Catalog',
+  currency: 'usd',
+  features: {
+    accounts: false,
+  },
+};

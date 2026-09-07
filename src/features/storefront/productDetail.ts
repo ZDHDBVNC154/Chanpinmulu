@@ -4,7 +4,6 @@ import { getProductBySlug, listProductImages, type Product } from '../products/d
 import { listVariants, listExtras } from '../products/variants';
 import { categoriesForProduct, relatedProducts } from '../categories/db';
 import { getRelatedStored, storeRelatedIds } from '../search';
-import { enabledMethods } from '../payments';
 import { markdownExcerpt, renderMarkdown } from '../pages/markdown.ts';
 import { productImageSources, productImageUrl, type ImageDelivery } from '../products/image';
 import { stockState } from '../products/stock';
@@ -153,10 +152,7 @@ export async function loadProductDetail(
     };
   });
 
-  const offered = options.settings ? enabledMethods(options.settings) : [];
-  const canCheckout = offered.length > 0;
   const cartEnabled = options.settings?.cartEnabled ?? true;
-  const buyNowEnabled = options.settings?.buyNowEnabled ?? true;
 
   const imagePath = productImageUrl(product.image_key, options.imageBaseUrl);
   const jsonLd = {
@@ -198,6 +194,24 @@ export async function loadProductDetail(
     model: {
       id: requirePublicId(product.public_id, product.id, 'product'),
       name: product.name,
+      sku: product.sku ?? null,
+      nameZh: product.name_zh ?? null,
+      moq: product.moq ?? 1,
+      showPrice: product.show_price === 1,
+      oemAvailable: product.oem_available !== 0,
+      specifications: [
+        ['Material', product.material],
+        ['Dimensions', product.dimensions],
+        ['Available colors', product.colors],
+        ['Inner packing', product.inner_pack],
+        ['Carton quantity', product.carton_pack],
+        ['Carton size', product.carton_size],
+        ['Gross weight', product.gross_weight],
+        ['Net weight', product.net_weight],
+        ['Sample lead time', product.sample_lead_time],
+        ['Production lead time', product.production_lead_time],
+        ['Certifications', product.certifications],
+      ].flatMap(([label, value]) => value ? [{ label: String(label), value: String(value) }] : []),
       description: product.description,
       descriptionHtml: product.description
         ? renderMarkdown(product.description, { baseUrl: options.imageBaseUrl })
@@ -206,7 +220,7 @@ export async function loadProductDetail(
       priceCents: product.price_cents,
       currency: options.currency,
       priceVaries,
-      soldOut,
+      soldOut: false,
       // Deliberately never shown for a product with variants: the product-level
       // count means nothing when the variant is the inventory unit.
       lowStock: !hasVariants && state === 'low',
@@ -237,7 +251,7 @@ export async function loadProductDetail(
       showAddToCart: cartEnabled,
       // Buy now is express (it skips the cart), so it survives the cart being
       // switched off — but not the absence of any rail that can take money.
-      showBuyNow: buyNowEnabled && canCheckout,
+      showBuyNow: false,
       variantLabel: product.variant_label,
       variants: variants.map((variant, index) => ({
         id: requirePublicId(variant.public_id, variant.id, 'variant'),
