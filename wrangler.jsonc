@@ -16,6 +16,13 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "christmas-factory-catalog",
 	"main": "./src/worker.ts",
+	"workers_dev": true,
+	"routes": [
+		{
+			"pattern": "product.auromai.com",
+			"custom_domain": true
+		}
+	],
 	"compatibility_date": "2026-07-20",
 	"compatibility_flags": [
 		"nodejs_compat"
