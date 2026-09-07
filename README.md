@@ -1,3 +1,13 @@
+# Christmas Factory Catalog
+
+面向圣诞产品工厂的 B2B 产品目录，完整运行在 Cloudflare Workers、D1 和 R2：支持大类/小类、SKU、MOQ、包装规格、交期、OEM/ODM、询价清单、中文管理后台和 Excel/CSV 批量导入。
+
+后台入口：`https://你的域名/admin`。首次访问 `/admin/setup` 设置工厂名称和后台密码。日常更新说明见 [CATALOG_GUIDE_ZH.md](CATALOG_GUIDE_ZH.md)。
+
+本项目基于 minshop 改造。下面保留上游技术文档，便于后续维护。
+
+---
+
 # minshop
 
 [![Verify](https://github.com/ddyy/minshop/actions/workflows/verify.yml/badge.svg)](https://github.com/ddyy/minshop/actions/workflows/verify.yml)
