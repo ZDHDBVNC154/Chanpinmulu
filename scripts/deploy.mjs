@@ -22,7 +22,10 @@ console.log(`Deploying theme: ${theme.id} (from ${theme.source})`);
 
 
 function run(command, args) {
-  const result = spawnSync(command, args, {
+  const windows = process.platform === 'win32';
+  const executable = windows ? (process.env.ComSpec || 'cmd.exe') : command;
+  const commandArgs = windows ? ['/d', '/s', '/c', command, ...args] : args;
+  const result = spawnSync(executable, commandArgs, {
     cwd: root,
     env: process.env,
     stdio: 'inherit',

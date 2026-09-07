@@ -14,7 +14,7 @@
 	// Per-instance CLI deploys use scripts/provision-cf.sh, which renders an instance
 	// config from wrangler.template.jsonc (real ids) and restores this file after.
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "minshop",
+	"name": "christmas-factory-catalog",
 	"main": "./src/worker.ts",
 	"compatibility_date": "2026-07-20",
 	"compatibility_flags": [
@@ -72,19 +72,20 @@
 	"d1_databases": [
 		{
 			"binding": "DB",
-			"database_name": "minshop-db",
+			"database_name": "christmas-factory-catalog-db",
+			"database_id": "9d3a69a9-873f-467e-ae69-4e5d635c2132",
 			"migrations_dir": "migrations"
 		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "BUCKET",
-			"bucket_name": "minshop-images"
+			"bucket_name": "christmas-factory-catalog-images"
 		},
 		{
 			"binding": "FILES",
 			// Private deliverables: never enable r2.dev or attach a custom domain.
-			"bucket_name": "minshop-files"
+			"bucket_name": "christmas-factory-catalog-files"
 		}
 	],
 	// Optional integrations — uncomment + redeploy to enable (see README → Search,
@@ -105,6 +106,10 @@
 	// only invite a typo that a wizard field validates. Code defaults apply until the
 	// wizard runs: "My Shop" / "UTC" / FTS keyword search (see src/config.ts).
 	//
+	"vars": {
+		"STORE_NAME": "Christmas Factory Catalog",
+		"TIME_ZONE": "Asia/Shanghai"
+	},
 	// Secrets (SECRETS_KEK, AUTH_SECRET, provider keys) are set with `wrangler secret
 	// put` / the admin dashboard — never here.
 	//
