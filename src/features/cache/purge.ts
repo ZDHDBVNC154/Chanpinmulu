@@ -5,6 +5,10 @@ export interface CachePurger {
   purge(options: CachePurgeOptions): Promise<CachePurgeResult>;
 }
 
+function supportsPurge(purger: CachePurger): boolean {
+  return typeof (purger as { purge?: unknown } | null)?.purge === 'function';
+}
+
 function purgeFailure(
   mode: 'tags' | 'stock-tags' | 'everything',
   errors: CachePurgeError[] | unknown,
@@ -29,6 +33,11 @@ export async function purgeCacheTags(
 ): Promise<void> {
   const normalized = normalizeCacheTags(tags);
   if (normalized.length === 0) return;
+
+  // Cloudflare only exposes cache.purge when Workers Cache is enabled for the
+  // deployment. Fresh workers.dev catalogs intentionally keep it disabled, so
+  // content writes must not turn into a 500 after D1 has already committed.
+  if (!supportsPurge(purger)) return;
 
   try {
     const result = await purger.purge({ tags: normalized });
@@ -81,6 +90,7 @@ export async function purgeStockProductCache(
 ): Promise<void> {
   const tags = productCacheTags(productPublicIds);
   if (tags.length === 0) return;
+  if (!supportsPurge(purger)) return;
 
   try {
     const result = await purger.purge({ tags });

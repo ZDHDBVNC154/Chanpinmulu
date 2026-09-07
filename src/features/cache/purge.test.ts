@@ -20,6 +20,15 @@ describe('Workers cache purge', () => {
     expect(purge).toHaveBeenCalledWith({ tags: ['catalog', 'shell'] });
   });
 
+  it('skips invalidation when Workers Cache is disabled', async () => {
+    await expect(
+      purgeCacheTags(['catalog'], {} as CachePurger),
+    ).resolves.toBeUndefined();
+    await expect(
+      purgeStockProductCache(['prod_a'], {} as CachePurger),
+    ).resolves.toBeUndefined();
+  });
+
   it('falls back to purge-everything after a rejected tag purge', async () => {
     const purge = vi
       .fn<CachePurger['purge']>()
