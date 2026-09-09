@@ -5,12 +5,18 @@ import { listInquiries } from '../../../features/inquiries/db';
 
 const inquiries = await listInquiries(env.DB, 200);
 const statusLabel = { new: '新询价', contacted: '已联系', quoted: '已报价', closed: '已关闭' } as const;
+const riskLabel = { low: '低', medium: '中', high: '高' } as const;
+const riskClass = {
+  low: 'bg-green-50 text-green-700',
+  medium: 'bg-amber-100 text-amber-800',
+  high: 'bg-red-100 text-red-700',
+} as const;
 ---
 
 <AdminLayout title="询价单" active="inquiries">
   <div class="mb-8 flex flex-wrap items-center justify-between gap-4"><div><h1 class="font-serif text-3xl tracking-tight">询价单</h1><p class="mt-2 text-sm text-gray-500">客户从产品目录提交的报价请求。</p></div><a href="/admin/inquiries/export.csv" class="rounded-md border border-line px-4 py-2 text-xs tracking-wider text-gray-600 hover:border-brand hover:text-brand">导出 CSV</a></div>
-  <div class="overflow-x-auto"><table class="admin-table w-full min-w-[48rem] text-left text-sm"><thead><tr class="border-b border-line text-xs text-gray-400"><th class="py-3 pr-4 font-normal">编号 / 时间</th><th class="py-3 pr-4 font-normal">联系人</th><th class="py-3 pr-4 font-normal">公司</th><th class="py-3 pr-4 font-normal">国家/地区</th><th class="py-3 pr-4 font-normal">产品数</th><th class="py-3 font-normal">状态</th></tr></thead><tbody>
-    {inquiries.map((inquiry) => <tr class="border-b border-line"><td class="py-3 pr-4"><a href={`/admin/inquiries/${inquiry.public_id}`} class="font-medium text-accent hover:underline">{inquiry.reference}</a><span class="mt-1 block text-xs text-gray-400">{new Date(inquiry.created_at + 'Z').toLocaleString('zh-CN')}</span></td><td class="py-3 pr-4">{inquiry.contact_name}<a href={`mailto:${inquiry.email}`} class="mt-1 block text-xs text-gray-400 hover:text-brand">{inquiry.email}</a></td><td class="py-3 pr-4">{inquiry.company}</td><td class="py-3 pr-4 text-gray-500">{inquiry.country}</td><td class="py-3 pr-4 tabular-nums">{inquiry.item_count ?? 0}</td><td class="py-3"><span class={`rounded-full px-2.5 py-1 text-xs ${inquiry.status === 'new' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'}`}>{statusLabel[inquiry.status]}</span></td></tr>)}
-    {inquiries.length === 0 && <tr><td colspan="6" class="py-12 text-center text-gray-400">还没有询价单。</td></tr>}
+  <div class="overflow-x-auto"><table class="admin-table w-full min-w-[64rem] text-left text-sm"><thead><tr class="border-b border-line text-xs text-gray-400"><th class="py-3 pr-4 font-normal">编号 / 时间</th><th class="py-3 pr-4 font-normal">联系人</th><th class="py-3 pr-4 font-normal">公司</th><th class="py-3 pr-4 font-normal">客户 / IP 地区</th><th class="py-3 pr-4 font-normal">来源</th><th class="py-3 pr-4 font-normal">风险</th><th class="py-3 pr-4 font-normal">产品数</th><th class="py-3 font-normal">状态</th></tr></thead><tbody>
+    {inquiries.map((inquiry) => <tr class="border-b border-line"><td class="py-3 pr-4"><a href={`/admin/inquiries/${inquiry.public_id}`} class="font-medium text-accent hover:underline">{inquiry.reference}</a><span class="mt-1 block text-xs text-gray-400">{new Date(inquiry.created_at + 'Z').toLocaleString('zh-CN')}</span></td><td class="py-3 pr-4">{inquiry.contact_name}<a href={`mailto:${inquiry.email}`} class="mt-1 block text-xs text-gray-400 hover:text-brand">{inquiry.email}</a></td><td class="py-3 pr-4">{inquiry.company}</td><td class="py-3 pr-4 text-gray-500">{inquiry.country}<span class="mt-1 block text-xs text-gray-400">{[inquiry.ip_country, inquiry.ip_region].filter(Boolean).join(' · ') || 'IP 未知'}</span></td><td class="py-3 pr-4">{inquiry.source || 'Direct'}{inquiry.source_detail && <span class="mt-1 block max-w-48 truncate text-xs text-gray-400">{inquiry.source_detail}</span>}</td><td class="py-3 pr-4"><span class={`rounded-full px-2.5 py-1 text-xs ${riskClass[inquiry.risk_level]}`}>{riskLabel[inquiry.risk_level]} · {inquiry.risk_score}</span></td><td class="py-3 pr-4 tabular-nums">{inquiry.item_count ?? 0}</td><td class="py-3"><span class={`rounded-full px-2.5 py-1 text-xs ${inquiry.status === 'new' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-600'}`}>{statusLabel[inquiry.status]}</span></td></tr>)}
+    {inquiries.length === 0 && <tr><td colspan="8" class="py-12 text-center text-gray-400">还没有询价单。</td></tr>}
   </tbody></table></div>
 </AdminLayout>

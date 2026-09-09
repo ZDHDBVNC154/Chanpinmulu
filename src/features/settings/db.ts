@@ -37,6 +37,7 @@ export type SettingKey =
   // Integrations configured in the admin dashboard (non-secret halves; the keys
   // live encrypted in the vault — see features/secrets/store.ts).
   | 'email_enabled' // '0' = order/login email off; absent = on
+  | 'dingtalk_enabled' // '1' = send new-inquiry alerts to a signed DingTalk robot
   | 'email_provider' // 'resend' | 'cloudflare'; absent = resend
   | 'logo_image_key' // media image_key shown instead of the text store name; absent = text
   | 'home_page' // what / renders: 'page:<id>' | 'product:<id>'; absent = the catalog list
@@ -81,6 +82,8 @@ export interface StoreSettings {
   configuredSecrets: string[];
   /** Order/login email on (default true; a no-op until a provider key is set). */
   emailEnabled: boolean;
+  /** Signed DingTalk robot alerts for new inquiries. Default off. */
+  dingTalkEnabled: boolean;
   /** Email backend: 'resend' (free) or 'cloudflare' (paid send_email binding). */
   emailProvider: 'resend' | 'cloudflare';
   /** Sender address / display name, or null to use the build-time defaults. */
@@ -195,6 +198,7 @@ export function parseStoreSettings(
       .filter((r) => r.key.startsWith('enc:') && r.value)
       .map((r) => r.key.slice(4)),
     emailEnabled: map.get('email_enabled') !== '0',
+    dingTalkEnabled: map.get('dingtalk_enabled') === '1',
     emailProvider: map.get('email_provider') === 'cloudflare' ? 'cloudflare' : 'resend',
     logoImageKey: map.get('logo_image_key') ?? null,
     homePage: map.get('home_page') ?? null,

@@ -12,3 +12,13 @@ const reference = Astro.url.searchParams.get('ref');
     <a href="/products" class="mt-8 inline-block rounded-md bg-brand px-6 py-3 text-sm font-medium uppercase tracking-wider text-white">Continue browsing</a>
   </div>
 </Layout>
+
+<script>
+  // The next inquiry should record its own first-touch campaign, not reuse the
+  // source that led to this completed submission.
+  try {
+    localStorage.removeItem('auromai_first_touch');
+  } catch {
+    // Restricted browsing may disable storage.
+  }
+</script>

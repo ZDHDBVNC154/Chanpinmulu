@@ -129,6 +129,26 @@ const shell = buildShellModel({
       document.addEventListener('load', finishImageFade, true);
       document.addEventListener('error', finishImageFade, true);
     </script>
+    <script is:inline>
+      // First-touch attribution stays in this browser until the inquiry is sent.
+      // It needs no advertising SDK, cookie banner, or third-party tracking call.
+      try {
+        if (!localStorage.getItem('auromai_first_touch')) {
+          var touchUrl = new URL(location.href);
+          var touchSource = touchUrl.searchParams.get('utm_source') ||
+            (touchUrl.searchParams.get('fbclid') ? 'facebook' : '');
+          localStorage.setItem('auromai_first_touch', JSON.stringify({
+            landing_url: touchUrl.href,
+            referrer: document.referrer || '',
+            utm_source: touchSource,
+            utm_medium: touchUrl.searchParams.get('utm_medium') || '',
+            utm_campaign: touchUrl.searchParams.get('utm_campaign') || '',
+          }));
+        }
+      } catch {
+        // Private/restricted browsing may disable storage; storefront stays usable.
+      }
+    </script>
   </head>
   <body class="flex min-h-screen flex-col bg-paper text-ink antialiased">
     <StoreHeader model={shell} />

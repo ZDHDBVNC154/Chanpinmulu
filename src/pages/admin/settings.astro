@@ -47,6 +47,7 @@ import { onDemandImageDeliveryAvailable } from '../../features/products/image';
 import { catalogIsOrphaned } from '../../features/navigation/db';
 import { CACHE_TAG } from '../../features/cache/tags';
 import { purgeCacheTags } from '../../features/cache/purge';
+import { isAllowedDingTalkWebhook } from '../../features/notifications/dingtalk';
 
 const capabilities: RuntimeCapabilities = {
   vault: vaultReady(),
@@ -249,6 +250,23 @@ if (Astro.request.method === 'POST') {
     await setSetting(env.DB, 'turnstile_enabled', requestedEnabled && ready ? '1' : null);
     if (requestedEnabled && !ready) {
       validationError = 'Add both the Turnstile site key and secret before enabling bot protection.';
+    }
+  } else if (action === 'save_dingtalk') {
+    const requestedEnabled = String(form.get('dingtalk_enabled')) === '1';
+    const suppliedWebhook = String(form.get('secret:dingtalk_webhook') ?? '').trim();
+    if (suppliedWebhook && !isAllowedDingTalkWebhook(suppliedWebhook)) {
+      validationError = 'Enter a valid https://oapi.dingtalk.com/robot/send webhook.';
+    } else {
+      await applySecrets(['dingtalk_webhook', 'dingtalk_sign_secret']);
+      const [webhook, secret] = await Promise.all([
+        getSecret(env.DB, 'dingtalk_webhook'),
+        getSecret(env.DB, 'dingtalk_sign_secret'),
+      ]);
+      const ready = !!webhook && !!secret && isAllowedDingTalkWebhook(webhook);
+      await setSetting(env.DB, 'dingtalk_enabled', requestedEnabled && ready ? '1' : null);
+      if (requestedEnabled && !ready) {
+        validationError = 'Add a valid webhook and signing secret before enabling DingTalk alerts.';
+      }
     }
   } else if (action === 'save_default') {
     const prov = String(form.get('payment_provider') ?? '');
@@ -494,6 +512,13 @@ const emailBindingReady = !!env.EMAIL;
 const selectedEmailReady =
   email.provider === 'cloudflare' ? emailBindingReady : resendReady;
 
+const dingTalk = {
+  enabled: settings.dingTalkEnabled,
+  webhookStored: inD1('dingtalk_webhook'),
+  secretStored: inD1('dingtalk_sign_secret'),
+};
+const dingTalkReady = dingTalk.webhookStored && dingTalk.secretStored;
+
 // Turnstile (bot protection) — enabled + sitekey in D1, secret in the vault.
 const turnstile = {
   enabled: settings.turnstileEnabled,
@@ -510,6 +535,7 @@ const sections = [
   { id: 'images', label: 'Images' },
   { id: 'payments', label: 'Payments' },
   { id: 'email', label: 'Email' },
+  { id: 'dingtalk', label: 'DingTalk' },
   { id: 'turnstile', label: 'Bot protection' },
   { id: 'search', label: 'Search' },
   { id: 'build-time', label: 'Build-time' },
@@ -1227,6 +1253,60 @@ const sections = [
         Send test
       </button>
       <span data-email-test-result class="text-xs font-medium"></span>
+    </form>
+  </section>
+
+  {/* ── DingTalk new-inquiry alerts ─────────────────────────────────────── */}
+  <section id="dingtalk" class="mt-10 scroll-mt-16">
+    <h2 class="mb-2 text-lg font-bold">钉钉询盘通知</h2>
+    <p class="mb-4 text-sm text-gray-500">
+      客户提交询价后，Worker 直接向钉钉群自定义机器人发送加签消息，不经过第三方中转服务。
+      Webhook 和加签密钥会使用 AES-GCM 加密后保存，后台不会回显原文。
+    </p>
+    <form method="POST" class="space-y-4 rounded-lg border border-gray-200 bg-white p-4">
+      <input type="hidden" name="_action" value="save_dingtalk" />
+      <label class="flex items-center gap-3 text-sm">
+        <input
+          type="checkbox"
+          name="dingtalk_enabled"
+          value="1"
+          checked={dingTalk.enabled && dingTalkReady}
+          disabled={!vault}
+          class="size-4"
+        />
+        <span class="font-medium">启用新询盘通知</span>
+        {!vault && <span class="text-xs uppercase tracking-widest text-gray-400">Unavailable</span>}
+      </label>
+      <div class="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+        如果 Webhook 或密钥曾在聊天、截图或文档中出现，请先在钉钉删除并重新创建机器人，再把新凭据填到这里。
+      </div>
+      <SecretField
+        name="dingtalk_webhook"
+        label="机器人 Webhook"
+        hint="https://oapi.dingtalk.com/robot/send?access_token=…"
+        storedInD1={dingTalk.webhookStored}
+        vault={vault}
+      />
+      <SecretField
+        name="dingtalk_sign_secret"
+        label="加签密钥"
+        hint="SEC…"
+        storedInD1={dingTalk.secretStored}
+        vault={vault}
+      />
+      <div class="flex flex-wrap gap-2">
+        <button type="submit" class="rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover">
+          保存
+        </button>
+        <button
+          type="submit"
+          formaction="/api/admin/dingtalk/test"
+          disabled={!dingTalkReady}
+          class="rounded-md border border-line px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-700 hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:text-gray-300"
+        >
+          发送测试消息
+        </button>
+      </div>
     </form>
   </section>
 

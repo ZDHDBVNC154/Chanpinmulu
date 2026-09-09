@@ -19,6 +19,8 @@ export type SecretName =
   | 'shippo_api_key'
   | 'resend_api_key'
   | 'turnstile_secret_key'
+  | 'dingtalk_webhook'
+  | 'dingtalk_sign_secret'
   | 'lnbits_api_key'
   | 'phoenixd_password';
 
@@ -29,6 +31,8 @@ export const SECRET_NAMES: readonly SecretName[] = [
   'shippo_api_key',
   'resend_api_key',
   'turnstile_secret_key',
+  'dingtalk_webhook',
+  'dingtalk_sign_secret',
   'lnbits_api_key',
   'phoenixd_password',
 ];

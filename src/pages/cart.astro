@@ -63,8 +63,14 @@ const catalogHref = catalogPath(Astro.locals.settings?.homePage);
 
         <section class="rounded-xl border border-line bg-surface p-6" aria-labelledby="contact-heading">
           <h2 id="contact-heading" class="font-serif text-2xl">Your contact details</h2>
-          <form method="POST" action="/api/inquiries" class="mt-6 space-y-4">
+          <form method="POST" action="/api/inquiries" data-inquiry-form class="mt-6 space-y-4">
             <div class="hidden" aria-hidden="true"><label>Website <input name="website" tabindex="-1" autocomplete="off" /></label></div>
+            <input type="hidden" name="browser_timezone" />
+            <input type="hidden" name="landing_url" />
+            <input type="hidden" name="referrer" />
+            <input type="hidden" name="utm_source" />
+            <input type="hidden" name="utm_medium" />
+            <input type="hidden" name="utm_campaign" />
             <label class="block text-sm">Name <span class="text-red-600">*</span><input required name="contact_name" autocomplete="name" maxlength="120" class="mt-1.5 w-full rounded-md border border-line bg-paper px-3 py-2.5 focus:border-brand focus:outline-none" /></label>
             <label class="block text-sm">Company <span class="text-red-600">*</span><input required name="company" autocomplete="organization" maxlength="180" class="mt-1.5 w-full rounded-md border border-line bg-paper px-3 py-2.5 focus:border-brand focus:outline-none" /></label>
             <label class="block text-sm">Business email <span class="text-red-600">*</span><input required type="email" name="email" autocomplete="email" maxlength="254" class="mt-1.5 w-full rounded-md border border-line bg-paper px-3 py-2.5 focus:border-brand focus:outline-none" /></label>
@@ -81,3 +87,22 @@ const catalogHref = catalogPath(Astro.locals.settings?.homePage);
     )}
   </div>
 </Layout>
+
+<script>
+  const inquiryForm = document.querySelector<HTMLFormElement>('[data-inquiry-form]');
+  if (inquiryForm) {
+    const setField = (name: string, value: unknown) => {
+      const field = inquiryForm.elements.namedItem(name);
+      if (field instanceof HTMLInputElement) field.value = typeof value === 'string' ? value : '';
+    };
+    try {
+      const attribution = JSON.parse(localStorage.getItem('auromai_first_touch') || '{}');
+      for (const name of ['landing_url', 'referrer', 'utm_source', 'utm_medium', 'utm_campaign']) {
+        setField(name, attribution[name]);
+      }
+    } catch {
+      // Storage may be disabled; the inquiry still submits normally.
+    }
+    setField('browser_timezone', Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }
+</script>
