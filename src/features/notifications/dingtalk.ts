@@ -60,21 +60,22 @@ export function buildDingTalkInquiryMarkdown(input: DingTalkInquiry): string {
   const network = [intelligence.ipAsOrganization, intelligence.ipAsn ? `ASN ${intelligence.ipAsn}` : null]
     .filter(Boolean).join('（') + (intelligence.ipAsOrganization && intelligence.ipAsn ? '）' : '');
   const needs = lines.slice(0, 8).map((line) =>
-    `${clean(line.name)} × ${line.quantity}${line.optionLabel ? `（${clean(line.optionLabel)}）` : ''}`,
-  ).join('；');
+    `- ${clean(line.name)} × ${line.quantity}${line.optionLabel ? `（${clean(line.optionLabel)}）` : ''}`,
+  ).join('\n');
   const signals = intelligence.riskSignals.length > 0
-    ? intelligence.riskSignals.map(clean).join('；')
-    : '未发现明显风险信号';
+    ? intelligence.riskSignals.map((signal) => `- ${clean(signal)}`).join('\n')
+    : '- 未发现明显风险信号';
 
   return [
     '### 📩 Auromai 新询盘',
-    '',
+    '#### 客户信息',
     `**询价编号：** ${clean(input.reference)}`,
     `**姓名：** ${clean(contact.contactName)}`,
     `**公司：** ${clean(contact.company)}`,
     `**邮箱：** ${clean(contact.email)}`,
-    `**需求：** ${needs || '—'}`,
-    '',
+    '#### 产品需求',
+    needs || '- —',
+    '#### 访问分析',
     `🌐 **IP 位置：** ${clean(location)}${intelligence.clientIpMasked ? `（${clean(intelligence.clientIpMasked)}）` : ''}`,
     `🕐 **IP 时区：** ${clean(intelligence.ipTimezone)}`,
     `🕐 **浏览器时区：** ${clean(intelligence.browserTimezone)}`,
@@ -82,13 +83,12 @@ export function buildDingTalkInquiryMarkdown(input: DingTalkInquiry): string {
     `📱 **设备：** ${clean([intelligence.deviceType, intelligence.deviceOs, intelligence.browserName].join(' · '))}`,
     `🔗 **来源：** ${clean([intelligence.source, intelligence.sourceDetail].filter(Boolean).join(' / '))}`,
     `🔁 **历史提交：** ${intelligence.historyCount} 次`,
-    '',
+    '#### 风险判断',
     `🔒 **风险：${riskLabel[intelligence.riskLevel]}（${intelligence.riskScore} 分）**`,
-    `**风险信号：** ${signals}`,
+    `**风险信号：**\n\n${signals}`,
     `⭐ **建议：** ${advice[intelligence.riskLevel]}`,
-    '',
     `[打开后台查看完整询价](${input.adminUrl})`,
-  ].join('\n');
+  ].join('\n\n');
 }
 
 export async function sendDingTalkMarkdown(

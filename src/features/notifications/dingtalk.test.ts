@@ -50,5 +50,8 @@ describe('DingTalk inquiry content', () => {
     expect(markdown).toContain('Instagram / Christmas Campaign');
     expect(markdown).toContain('Mobile · iOS · Safari');
     expect(markdown).toContain('风险：中');
+    expect(markdown).toContain('#### 客户信息\n\n**询价编号：**');
+    expect(markdown).toContain('#### 访问分析\n\n🌐 **IP 位置：**');
+    expect(markdown).not.toContain('**询价编号：** RFQ-20260909-TEST\n**姓名：**');
   });
 });
