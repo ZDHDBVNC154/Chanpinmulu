@@ -1294,19 +1294,21 @@ const sections = [
         storedInD1={dingTalk.secretStored}
         vault={vault}
       />
-      <div class="flex flex-wrap gap-2">
-        <button type="submit" class="rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover">
-          保存
-        </button>
-        <button
-          type="submit"
-          formaction="/api/admin/dingtalk/test"
-          disabled={!dingTalkReady}
-          class="rounded-md border border-line px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-700 hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:text-gray-300"
-        >
-          发送测试消息
-        </button>
-      </div>
+      <button type="submit" class="rounded-md bg-brand px-4 py-2 text-xs font-medium uppercase tracking-wider text-white hover:bg-brand-hover">
+        保存
+      </button>
+    </form>
+    {/* A separate form is intentional: the settings form is saved inline by the
+        progressive-enhancement script below. A `formaction` submitter inside it
+        would be intercepted and silently treated as another settings save. */}
+    <form method="POST" action="/api/admin/dingtalk/test" class="mt-3">
+      <button
+        type="submit"
+        disabled={!dingTalkReady}
+        class="rounded-md border border-line px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-700 hover:border-brand hover:text-brand disabled:cursor-not-allowed disabled:text-gray-300"
+      >
+        发送测试消息
+      </button>
     </form>
   </section>
 
